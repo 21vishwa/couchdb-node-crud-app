@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>User Dashboard</h2>
+
+<button onclick="logout()">Logout</button>
+
+<hr>
+
+<h3>Add User</h3>
+<input id="name" placeholder="Name" required>
+
+<input
+  id="age"
+  type="number"
+  min="1"
+  max="120"
+  placeholder="Age"
+  required
+>
+
+<button onclick="addUser()">Add</button>
+
+<hr>
+
+<h3>Users List</h3>
+<ul id="users"></ul>
+
+<script>
+/* ================= AUTH CHECK ================= */
+function checkAuth() {
+  fetch("http://localhost:3000/api/users", {
+    credentials: "include"
+  })
+  .then(res => {
+    if (res.status === 401) {
+      window.location.href = "/login.html";
+    }
+  });
+}
+
+checkAuth();
+
+/* ================= LOAD USERS ================= */
+function loadUsers() {
+  fetch("http://localhost:3000/api/users", {
+    credentials: "include"
+  })
+  .then(res => res.json())
+  .then(data => {
+    const list = document.getElementById("users");
+    list.innerHTML = "";
+
+    data.forEach(u => {
+      const li = document.createElement("li");
+
+      li.innerHTML = `
+        ${u.name} - Age: ${u.age}
+        <button onclick="deleteUser('${u.id}','${u.rev}')">Delete</button>
+      `;
+
+      list.appendChild(li);
+    });
+  });
+}
+
+loadUsers();
+
+/* ================= ADD USER ================= */
+function addUser() {
+  const name = document.getElementById("name").value.trim();
+  const age = Number(document.getElementById("age").value);
+
+  if (!name) {
+    alert("Name is required");
+    return;
+  }
+
+  if (isNaN(age)) {
+    alert("Age must be a number");
+    return;
+  }
+
+  if (age < 1 || age > 120) {
+    alert("Age must be between 1 and 120");
+    return;
+  }
+
+  fetch("http://localhost:3000/api/users", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    credentials: "include",
+    body: JSON.stringify({ name, age })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message);
+    document.getElementById("name").value = "";
+    document.getElementById("age").value = "";
+    loadUsers();
+  })
+  .catch(() => alert("Server error"));
+}
+
+/* ================= DELETE USER ================= */
+function deleteUser(id, rev) {
+  if (!confirm("Are you sure you want to delete this user?")) return;
+
+  fetch(`http://localhost:3000/api/users/${id}/${rev}`, {
+    method: "DELETE",
+    credentials: "include"
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message);
+    loadUsers();
+  })
+  .catch(() => alert("Delete failed"));
+}
+
+/* ================= LOGOUT ================= */
+function logout() {
+  fetch("http://localhost:3000/api/auth/logout", {
+    method: "POST",
+    credentials: "include"
+  })
+  .then(() => {
+    window.location.href = "/login.html";
+  });
+}
+</script>
+
+</body>
+</html>
